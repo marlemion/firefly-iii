@@ -117,8 +117,13 @@ class AccountFactory
         $type         = $this->getAccountType($data);
         $data['iban'] = $this->filterIban($data['iban'] ?? null);
 
-        // account may exist already:
-        $return = $this->find($data['name'], $type->type);
+        // account may exist already; search preferably by IBAN,
+        // otherwise by name
+        if ( null !== $data['iban'] ) {
+            $return = $this->find($data['iban'], $type->type);
+        } else {
+            $return = $this->find($data['name'], $type->type);
+        }
 
         if (null !== $return) {
             return $return;
