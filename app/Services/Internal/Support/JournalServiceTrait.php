@@ -72,18 +72,30 @@ trait JournalServiceTrait
         $message = 'Based on the fact that the transaction is a %s, the %s account should be in: %s. Direction is %s.';
         Log::debug(sprintf($message, $transactionType, $direction, implode(', ', $expectedTypes[$transactionType] ?? ['UNKNOWN']), $direction));
 
-        Log::debug('Now searching by ID');
+        Log::debug('Now searching account by ID');
         $result = $this->findAccountById($data, $expectedTypes[$transactionType]);
-        Log::debug('If nothing is found, searching by IBAN');
-        $result = $this->findAccountByIban($result, $data, $expectedTypes[$transactionType]);
-        Log::debug('If nothing is found, searching by number');
-        $result = $this->findAccountByNumber($result, $data, $expectedTypes[$transactionType]);
-        Log::debug('If nothing is found, searching by name');
-        $result = $this->findAccountByName($result, $data, $expectedTypes[$transactionType]);
-        Log::debug('If nothing is found, create it.');
-        $result = $this->createAccount($result, $data, $expectedTypes[$transactionType][0]);
-        Log::debug('If cant be created, return cash account.');
-        return $this->getCashAccount($result, $data, $expectedTypes[$transactionType]);
+        if (null === $result && strlen($data['iban']) != 0) {
+            Log::debug('Nothing has been found, searching by IBAN');
+            $result = $this->findAccountByIban($result, $data, $expectedTypes[$transactionType]);
+        }
+        if (null === $result && strlen($data['iban']) == 0) {
+            Log::debug('Nothing has been found and no IBAN given, searching by number');
+            $result = $this->findAccountByNumber($result, $data, $expectedTypes[$transactionType]);
+        }
+        if (null === $result && strlen($data['iban']) == 0) {
+            Log::debug('Nothing has been found, searching by name');
+            $result = $this->findAccountByName($result, $data, $expectedTypes[$transactionType]);
+        }
+        if (null === $result) {
+            Log::debug('No account has been found, creating it.');
+            $result = $this->createAccount($result, $data, $expectedTypes[$transactionType][0]);
+        }
+        if (null === $result) {
+            Log::debug('Account could not be created, returning cash account.');
+            $result = $this->getCashAccount($result, $data, $expectedTypes[$transactionType]);
+        }
+
+        return $result;
     }
 
     /**
